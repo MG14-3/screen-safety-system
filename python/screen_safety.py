@@ -26,6 +26,7 @@ import logging
 import sys
 from flask import Flask, Response
 from deepface import DeepFace
+import screen_brightness_control as sbc
 
 # ─── CONFIGURATION ────────────────────────────────────────────────────────────
 SERIAL_PORT   = "COM5"          # ← Change to your COM port (e.g. COM3, /dev/ttyUSB0)
@@ -36,13 +37,13 @@ FLASK_PORT    = 5000
 # Thresholds
 DIST_OFF      = 40.0            # cm — screen turns OFF below this
 DIST_DIM      = 55.0            # cm — screen dims if child detected below this
-AGE_CHILD_MAX = 12              # years — treat as child below this age
-BRIGHTNESS_NORMAL = 100         # % — default brightness
+AGE_CHILD_MAX = 30              # years — treat as child below this age
+BRIGHTNESS_NORMAL = 50  # % — normal brightness (try to read current, fallback to 100)
 BRIGHTNESS_DIM    = 30          # % — dimmed brightness
 BRIGHTNESS_OFF    = 0           # % — screen off
 
 # DeepFace detection interval (seconds) — avoid hammering GPU
-DETECT_INTERVAL = 2.0
+DETECT_INTERVAL = 1.0
 
 # ─── LOGGING ──────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -196,7 +197,7 @@ def safety_loop():
             continue
 
         # ── Decision logic ──────────────────────────────────────────────
-        if dist < DIST_OFF:
+        if dist < DIST_OFF and age is not None and age < AGE_CHILD_MAX:
             new_bri = BRIGHTNESS_OFF
             action  = "SCREEN_OFF"
         elif dist < DIST_DIM and age is not None and age < AGE_CHILD_MAX:
